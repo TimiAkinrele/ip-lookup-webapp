@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Lookup Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>IP Address Information</h1>
+
+        {% if ip_data %}
+            <h2>AbuseIPDB Reports</h2>
+            <table>
+                <tr>
+                    <th>Abuse Confidence Score</th>
+                    <td>{{ ip_data['abuse_score'] }}</td>
+                </tr>
+                <tr>
+                    <th>Total Reports</th>
+                    <td>{{ ip_data['total_reports'] }}</td>
+                </tr>
+            </table>
+
+            <h3>Individual Reports</h3>
+            <table>
+                {% for report in ip_data['reports'] %}
+                <tr>
+                    <td>{{ report.reportedAt }}</td>
+                    <td>{{ report.comment }}</td>
+                    <td>{{ report.reporterCountryName }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+
+            <h2>VirusTotal Analysis</h2>
+            <table>
+                <tr>
+                    <th>Total Malicious Reports</th>
+                    <td>{{ ip_data['virustotal']['total_reports'] }}</td>
+                </tr>
+                <tr>
+                    <th>Last Analysis Date</th>
+                    <td>{{ ip_data['virustotal']['last_analysis_date'] }}</td>
+                </tr>
+            </table>
+
+            <h2>Shodan Information</h2>
+            <table>
+                <tr>
+                    <th>Operating System</th>
+                    <td>{{ ip_data['shodan']['os'] }}</td>
+                </tr>
+                <tr>
+                    <th>Hostnames</th>
+                    <td>{{ ip_data['shodan']['hostnames'] }}</td>
+                </tr>
+                <tr>
+                    <th>City</th>
+                    <td>{{ ip_data['shodan']['city'] }}</td>
+                </tr>
+                <tr>
+                    <th>Country</th>
+                    <td>{{ ip_data['shodan']['country'] }}</td>
+                </tr>
+                <tr>
+                    <th>ISP</th>
+                    <td>{{ ip_data['shodan']['isp'] }}</td>
+                </tr>
+                <tr>
+                    <th>Organization</th>
+                    <td>{{ ip_data['shodan']['org'] }}</td>
+                </tr>
+            </table>
+        {% else %}
+            <p>No data available.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

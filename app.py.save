@@ -1,0 +1,59 @@
+
+from flask import Flask, render_template, request
+import requests
+import matplotlib
+matplotlib.use('Agg')  # Use the 'Agg' backend for non-interactive plotting
+import matplotlib.pyplot as plt
+from io import BytesIO
+import base64
+
+app = Flask(__name__)
+
+# AbuseIPDB API configuration
+ABUSEIPDB_API_KEY = '4c88827b5b1c8e7125326237258df2785a4968ffd0b882a90042059b8cc31dd34197275ee8242837'
+ABUSEIPDB_ENDPOINT = 'https://api.abuseipdb.com/api/v2/check'
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/search', methods=['POST'])
+def search():
+    ip_address = request.form['ip_address']
+    days = 30  # Number of days to consider for reports
+
+    # Fetch data from AbuseIPDB
+    headers = {
+        'Key': ABUSEIPDB_API_KEY,
+        'Accept': 'application/json'
+    }
+    params = {
+        'ipAddress': ip_address,
+        'maxAgeInDays': days
+    }
+    response = requests.get(ABUSEIPDB_ENDPOINT, headers=headers, params=params)
+    data = response.json()
+
+    if 'data' in data:
+        abuse_confidence_score = data['data']['abuseConfidenceScore']
+    else:
+        abuse_confidence_score = 0
+
+    # Generate a simple bar chart
+    plt.figure(figsize=(6, 4))
+    plt.bar(ip_address, abuse_confidence_score, color='red')
+    plt.xlabel('IP Address')
+    plt.ylabel('Abuse Confidence Score')
+    plt.title('Abuse Confidence Score for IP Address')
+
+    # Save the plot to a BytesIO object
+    buf = BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    plot_url = base64.b64encode(buf.getvalue()).decode('utf8')
+    buf.close()
+
+    return render_template('result.html', plot_url=plot_url, data=data.get('data', {}))
+
+if __name__ == '__main__':
+    app.run(debug=True)
