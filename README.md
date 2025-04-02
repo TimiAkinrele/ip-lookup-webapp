@@ -45,3 +45,28 @@ Before running the application, you need to set up the following API keys for th
 - AbuseIPDB: Sign up and get the API Key
 - VirusTotal: Sign up and get the API Key
 - Shodan: Sign up and get the API Key
+
+  Once you've acquired your API Keys update the following variables in ```app.py```
+  ```
+  ABUSE_IP_DB_API_KEY = 'YOUR_ABUSE_IP_DB_API_KEY'
+  VIRUS_TOTAL_API_KEY = 'YOUR_VIRUS_TOTAL_API_KEY'
+  SHODAN_API_KEY = 'YOUR_SHODAN_API_KEY'
+  ```
+  
+## Running the Application
+1. Make sure all dependencies are installed.
+2. Run the Flask application:
+```
+  python app.py
+```
+The application will be available at ```http://127.0.0.1:5000/``` by default. Open this URL in your web browser.
+
+## How to Use the Application
+- Visit the web application on your browser.
+- On the home page, enter an IP address in the provided input field.
+- Click Submit to see the results. The application will fetch information from AbuseIPDB, VirusTotal, and Shodan and display it in a tabular format.
+
+You can see:
+- The AbuseIPDB reports and abuse confidence score.
+- VirusTotal analysis, including the last analysis date and malicious reports.
+- Shodan information like the operating system, hostnames, location, and ISP.
