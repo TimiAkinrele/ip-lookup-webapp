@@ -35,11 +35,17 @@ Activate the virtual environment:
   ```
   pip install -r requirements.txt
   ```
-  
+
 ### If you don't have a requirements.txt file yet, you can manually install the required packages:
   ```
   pip install flask requests
   ```
+
+### You may have to install the required python-dotenv package aswell via:
+  ```
+  pip install python-dotenv
+  ```
+
 ## Configuration
 Before running the application, you need to set up the following API keys for the services:
 - AbuseIPDB: Sign up and get the API Key
@@ -48,7 +54,7 @@ Before running the application, you need to set up the following API keys for th
 
   Once you've acquired your API Keys update the following variables in ```app.py```
   ```
-  ABUSE_IP_DB_API_KEY = 'YOUR_ABUSE_IP_DB_API_KEY'
+  ABUSEIPDB_API_KEY = 'YOUR_ABUSE_IP_DB_API_KEY'
   VIRUS_TOTAL_API_KEY = 'YOUR_VIRUS_TOTAL_API_KEY'
   SHODAN_API_KEY = 'YOUR_SHODAN_API_KEY'
   ```
