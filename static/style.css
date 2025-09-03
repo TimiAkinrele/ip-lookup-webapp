@@ -1,0 +1,85 @@
+:root { 
+  --bg:#0b1020; 
+  --card:#121a33; 
+  --text:#e6ecff; 
+  --muted:#a8b3d6; 
+  --accent:#5b8cff; 
+  --warn:#ffc14d; 
+  --err:#ff6b6b; 
+}
+
+* { box-sizing: border-box; }
+body { 
+  margin:0; 
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; 
+  background: linear-gradient(180deg, #0b1020, #0e1530); 
+  color:var(--text); 
+}
+
+.container { max-width: 1100px; margin: 40px auto; padding: 24px; }
+h1 { font-size: 28px; margin: 0 0 18px; }
+h2 { font-size: 18px; margin: 0 0 12px; color: var(--accent); }
+
+form { display:flex; gap:12px; align-items:center; margin: 18px 0 8px; }
+label { font-weight:600; }
+input[type="text"] { 
+  flex:1; min-width: 220px; padding:10px 12px; 
+  border-radius:10px; border:1px solid #2a3560; 
+  background:#0c1430; color:var(--text); 
+}
+button { 
+  padding:10px 14px; border-radius:10px; 
+  border:0; background:var(--accent); 
+  color:white; font-weight:600; cursor:pointer; 
+}
+button:hover { filter: brightness(1.05); }
+
+.grid { 
+  display:grid; 
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+  gap:16px; margin-top:20px; 
+  align-items: start; /* ensure cards align to top */
+}
+
+.card { 
+  background: var(--card); 
+  border:1px solid #2a3560; 
+  border-radius:16px; 
+  padding:16px; 
+  box-shadow: 0 10px 24px rgba(0,0,0,.25); 
+  overflow: hidden; /* keep content inside */
+}
+
+/* Fix table overflow & word wrapping */
+table { 
+  width:100%; 
+  border-collapse: collapse; 
+  margin-top:10px; 
+  table-layout: fixed; /* prevent wide columns */
+}
+th, td { 
+  text-align:left; 
+  padding:8px 10px; 
+  border-bottom:1px solid #223159; 
+  word-break: break-word; 
+  overflow-wrap: anywhere; 
+  white-space: normal; 
+}
+th { width: 38%; color: var(--muted); font-weight:600; }
+td { color: var(--text); }
+
+/* Scroll wrapper for long report tables */
+.table-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.alert { padding:10px 12px; border-radius:12px; margin: 12px 0; }
+.alert-warn { background: rgba(255, 193, 77, 0.12); border: 1px solid rgba(255, 193, 77, 0.35); }
+.alert-error { background: rgba(255, 107, 107, 0.12); border: 1px solid rgba(255, 107, 107, 0.35); }
+
+.muted { color: var(--muted); }
+.footnote { color: var(--muted); font-size: 13px; margin-top: 10px; }
+.back { display:inline-block; margin-top:18px; color: var(--accent); text-decoration:none; }
+.back:hover { text-decoration: underline; }

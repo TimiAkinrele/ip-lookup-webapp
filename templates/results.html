@@ -1,81 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Lookup Results</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IP Lookup Results</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>IP Address Information</h1>
+  <div class="container">
+    <h1>Results for: {{ ip_data.input_ip }}</h1>
 
-        {% if ip_data %}
-            <h2>AbuseIPDB Reports</h2>
-            <table>
-                <tr>
-                    <th>Abuse Confidence Score</th>
-                    <td>{{ ip_data['abuse_score'] }}</td>
-                </tr>
-                <tr>
-                    <th>Total Reports</th>
-                    <td>{{ ip_data['total_reports'] }}</td>
-                </tr>
-            </table>
+    {% if ip_data.errors and ip_data.errors|length > 0 %}
+      <div class="alert alert-warn">
+        <strong>Some sources failed:</strong>
+        <ul>
+          {% for e in ip_data.errors %}
+            <li>{{ e }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
 
-            <h3>Individual Reports</h3>
-            <table>
-                {% for report in ip_data['reports'] %}
-                <tr>
-                    <td>{{ report.reportedAt }}</td>
-                    <td>{{ report.comment }}</td>
-                    <td>{{ report.reporterCountryName }}</td>
-                </tr>
-                {% endfor %}
-            </table>
-
-            <h2>VirusTotal Analysis</h2>
-            <table>
-                <tr>
-                    <th>Total Malicious Reports</th>
-                    <td>{{ ip_data['virustotal']['total_reports'] }}</td>
-                </tr>
-                <tr>
-                    <th>Last Analysis Date</th>
-                    <td>{{ ip_data['virustotal']['last_analysis_date'] }}</td>
-                </tr>
-            </table>
-
-            <h2>Shodan Information</h2>
-            <table>
-                <tr>
-                    <th>Operating System</th>
-                    <td>{{ ip_data['shodan']['os'] }}</td>
-                </tr>
-                <tr>
-                    <th>Hostnames</th>
-                    <td>{{ ip_data['shodan']['hostnames'] }}</td>
-                </tr>
-                <tr>
-                    <th>City</th>
-                    <td>{{ ip_data['shodan']['city'] }}</td>
-                </tr>
-                <tr>
-                    <th>Country</th>
-                    <td>{{ ip_data['shodan']['country'] }}</td>
-                </tr>
-                <tr>
-                    <th>ISP</th>
-                    <td>{{ ip_data['shodan']['isp'] }}</td>
-                </tr>
-                <tr>
-                    <th>Organization</th>
-                    <td>{{ ip_data['shodan']['org'] }}</td>
-                </tr>
-            </table>
+    <div class="grid">
+      <!-- AbuseIPDB Check -->
+      <section class="card">
+        <h2>AbuseIPDB — Check</h2>
+        {% if ip_data.abuseipdb_check %}
+          <table>
+            <tr><th>Abuse Confidence Score</th><td>{{ ip_data.abuseipdb_check.abuse_confidence_score }}</td></tr>
+            <tr><th>Total Reports</th><td>{{ ip_data.abuseipdb_check.total_reports }}</td></tr>
+            <tr><th>Last Reported</th><td>{{ ip_data.abuseipdb_check.last_reported_at }}</td></tr>
+            <tr><th>Country</th><td>{{ ip_data.abuseipdb_check.country_code }}</td></tr>
+            <tr><th>Domain</th><td>{{ ip_data.abuseipdb_check.domain }}</td></tr>
+            <tr><th>Usage Type</th><td>{{ ip_data.abuseipdb_check.usage_type }}</td></tr>
+            <tr><th>ISP</th><td>{{ ip_data.abuseipdb_check.isp }}</td></tr>
+          </table>
         {% else %}
-            <p>No data available.</p>
+          <p class="muted">No data.</p>
         {% endif %}
+      </section>
+
+      <!-- AbuseIPDB Reports -->
+      <section class="card">
+        <h2>AbuseIPDB — Recent Reports (30d)</h2>
+        {% if ip_data.abuseipdb_reports and ip_data.abuseipdb_reports.results %}
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Reported At</th><th>Comment</th><th>Reporter Country</th></tr>
+              </thead>
+              <tbody>
+                {% for r in ip_data.abuseipdb_reports.results %}
+                  <tr>
+                    <td>{{ r.reportedAt }}</td>
+                    <td>{{ r.comment or "—" }}</td>
+                    <td>{{ r.reporterCountryName or "—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="muted">No recent reports.</p>
+        {% endif %}
+      </section>
+
+      <!-- VirusTotal -->
+      <section class="card">
+        <h2>VirusTotal</h2>
+        {% if ip_data.virustotal %}
+          <table>
+            <tr><th>Malicious</th><td>{{ ip_data.virustotal.malicious }}</td></tr>
+            <tr><th>Suspicious</th><td>{{ ip_data.virustotal.suspicious }}</td></tr>
+            <tr><th>Harmless</th><td>{{ ip_data.virustotal.harmless }}</td></tr>
+            <tr><th>Undetected</th><td>{{ ip_data.virustotal.undetected }}</td></tr>
+            <tr><th>Last Analysis</th><td>{{ ip_data.virustotal.last_analysis_date }}</td></tr>
+          </table>
+        {% else %}
+          <p class="muted">No data.</p>
+        {% endif %}
+      </section>
+
+      <!-- Shodan -->
+      <section class="card">
+        <h2>Shodan</h2>
+        {% if ip_data.shodan %}
+          <table>
+            <tr><th>OS</th><td>{{ ip_data.shodan.os }}</td></tr>
+            <tr><th>Hostnames</th><td>{{ ip_data.shodan.hostnames }}</td></tr>
+            <tr><th>City</th><td>{{ ip_data.shodan.city }}</td></tr>
+            <tr><th>Country</th><td>{{ ip_data.shodan.country }}</td></tr>
+            <tr><th>ISP</th><td>{{ ip_data.shodan.isp }}</td></tr>
+            <tr><th>Org</th><td>{{ ip_data.shodan.org }}</td></tr>
+            <tr><th>Open Ports</th><td>{{ ip_data.shodan.ports }}</td></tr>
+          </table>
+        {% else %}
+          <p class="muted">No data.</p>
+        {% endif %}
+      </section>
     </div>
+
+    <a class="back" href="{{ url_for('index') }}">← New lookup</a>
+  </div>
 </body>
 </html>
