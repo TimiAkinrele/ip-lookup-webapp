@@ -40,7 +40,7 @@ jobs:
 
       # ---------- Trivy (filesystem scan) ----------
       - name: Run Trivy vulnerability scanner on filesystem
-        uses: aquasecurity/trivy-action@v0.20.0
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           scan-type: 'fs'
           ignore-unfixed: true
@@ -67,7 +67,7 @@ jobs:
           provenance: false
 
       - name: Trivy Image Scan
-        uses: aquasecurity/trivy-action@0.22.0
+        uses: aquasecurity/trivy-action@0.20.0
         with:
           image-ref: ip-lookup-webapp-server:latest
           format: 'sarif'
