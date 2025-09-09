@@ -1,0 +1,116 @@
+name: DevSecOps Security Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write   # required for SARIF uploads
+  actions: read
+  checks: write
+
+jobs:
+  build-and-security:
+    runs-on: ubuntu-latest
+
+    env:
+      PYTHON_VERSION: '3.11'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # needed for trivy metadata
+
+
+      # ---------- Python setup ----------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install project requirements (if present)
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # ---------- Trivy (filesystem scan) ----------
+      - name: Run Trivy vulnerability scanner on filesystem
+        uses: aquasecurity/trivy-action@v0.20.0
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          exit-code: 1
+
+      # ---------- Docker build and scan ----------
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ip-lookup-webapp:${{ github.sha }},devsecops-demo:latest
+          load: true
+          provenance: false
+
+      - name: Trivy Image Scan
+        uses: aquasecurity/trivy-action@v0.20.0
+        with:
+          image-ref: devsecops-demo:latest
+          format: 'sarif'
+          output: 'trivy-image.sarif'
+          vuln-type: 'os,library'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          trivyignores: ./.trivyignore
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy
+
+      - name: Fail PR on Trivy HIGH/CRITICAL
+        if: github.event_name == 'pull_request'
+        run: |
+          trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed devsecops-demo:latest || {
+            echo "::error::Trivy found HIGH/CRITICAL issues"
+            exit 1
+          }
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/ip-lookup-webapp:${{ github.sha }}
+
+      # ---------- Artifact upload ----------
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist
+            coverage
+
+      # ---------- Additional security checks ----------
+      - name: Check for secrets in code
+        uses: gitleaks/gitleaks-action@v2
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+
+      # ---------- Pushes to main are always green ----------
+      - name: Push to main always green
+        if: github.event_name == 'push'
+        run: echo "Push to main is report-only; PRs enforce strict gates."
