@@ -67,7 +67,7 @@ jobs:
           provenance: false
 
       - name: Trivy Image Scan
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@0.22.0
         with:
           image-ref: ip-lookup-webapp-server:latest
           format: 'sarif'
