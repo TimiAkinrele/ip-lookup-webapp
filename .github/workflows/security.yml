@@ -107,6 +107,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
 
       - name: Dependency Review
+        if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
 
       # ---------- Pushes to main are always green ----------
