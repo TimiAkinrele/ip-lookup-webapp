@@ -54,7 +54,7 @@ jobs:
       - name: Log in to DockerHub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image
@@ -62,20 +62,19 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ip-lookup-webapp:${{ github.sha }},devsecops-demo:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ip-lookup-webapp:${{ github.sha }},ip-lookup-webapp-server:latest
           load: true
           provenance: false
 
       - name: Trivy Image Scan
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: devsecops-demo:latest
+          image-ref: ip-lookup-webapp-server:latest
           format: 'sarif'
           output: 'trivy-image.sarif'
           vuln-type: 'os,library'
           severity: 'HIGH,CRITICAL'
           ignore-unfixed: true
-          trivyignores: ./.trivyignore
 
       - name: Upload Trivy SARIF
         uses: github/codeql-action/upload-sarif@v3
@@ -86,7 +85,7 @@ jobs:
       - name: Fail PR on Trivy HIGH/CRITICAL
         if: github.event_name == 'pull_request'
         run: |
-          trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed devsecops-demo:latest || {
+          trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed ip-lookup-webapp-server:latest || {
             echo "::error::Trivy found HIGH/CRITICAL issues"
             exit 1
           }
