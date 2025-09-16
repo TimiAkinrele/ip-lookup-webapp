@@ -36,7 +36,9 @@ RUN adduser \
 # into this layer.
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    python -m pip install -r requirements.txt
+    pip install --upgrade pip \
+ && pip install --no-compile -r requirements.txt \
+ && pip install --no-compile --upgrade "setuptools>=78.1.1" "wheel>=0.43.0"
 
 # Copy the source code into the container.
 COPY . .
