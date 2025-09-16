@@ -183,7 +183,7 @@ jobs:
           scan-type: fs
           ignore-unfixed: true
           severity: CRITICAL,HIGH
-          exit-code: 0   
+          exit-code: 0   # report only
 
       # ---- Report-only Trivy image scan (SARIF uploaded) ----
       - name: Trivy image scan (report-only, SARIF)
