@@ -1,34 +1,56 @@
-# Include any files or directories that you don't want to be copied to your
-# container here (e.g., local build artifacts, temporary files, etc.).
-#
-# For more help, visit the .dockerignore file reference guide at
-# https://docs.docker.com/go/build-context-dockerignore/
+# VCS / OS
+.git
+.gitignore
+.DS_Store
 
-**/.DS_Store
-**/__pycache__
-**/.venv
-**/.classpath
-**/.dockerignore
-**/.env
-**/.git
-**/.gitignore
-**/.project
-**/.settings
-**/.toolstarget
-**/.vs
-**/.vscode
-**/*.*proj.user
-**/*.dbmdl
-**/*.jfm
-**/bin
-**/charts
-**/docker-compose*
-**/compose.y*ml
-**/Dockerfile*
-**/node_modules
-**/npm-debug.log
-**/obj
-**/secrets.dev.yaml
-**/values.dev.yaml
-LICENSE
-README.md
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.envrc
+
+# Python build/metadata
+*.egg-info/
+*.dist-info/
+pip-wheel-metadata/
+build/
+dist/
+
+# Node
+node_modules/
+npm-debug.log
+
+# Local env files
+.env
+.env.*
+
+# IDE / project files
+.vscode/
+.vs/
+.settings/
+.project
+.classpath
+.toolstarget
+*.proj.user
+
+# Build artifacts (if present in repo)
+bin/
+obj/
+charts/
+
+# Compose/K8s overrides (optional to exclude)
+docker-compose*
+compose.y*ml
+secrets.dev.yaml
+values.dev.yaml

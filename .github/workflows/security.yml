@@ -76,6 +76,8 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          pull: true
+          no-cache: true
           provenance: false
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
@@ -172,6 +174,8 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          pull: true
+          no-cache: true
           provenance: false
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
