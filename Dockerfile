@@ -6,8 +6,8 @@
 
 # Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
 
-ARG PYTHON_VERSION=3.9.6
-FROM python:${PYTHON_VERSION}-slim AS base
+ARG PYTHON_VERSION=3.11
+FROM python:${PYTHON_VERSION}-slim-bookworm
 
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -36,13 +36,16 @@ RUN adduser \
 # into this layer.
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    python -m pip install -r requirements.txt
-
-# Switch to the non-privileged user to run the application.
-USER appuser
+    pip install --upgrade pip \
+ && pip install --no-compile -r requirements.txt \
+ && pip install --no-compile --upgrade "setuptools>=78.1.1" "wheel>=0.43.0"
 
 # Copy the source code into the container.
 COPY . .
+
+# Switch to the non-privileged user to run the application. 
+RUN chown -R appuser:appuser /app
+USER appuser
 
 # Expose the port that the application listens on.
 EXPOSE 8000
