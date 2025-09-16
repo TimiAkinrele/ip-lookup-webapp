@@ -1,136 +1,210 @@
-name: DevSecOps Security Pipeline
+name: DevSecOps Pipeline (master PR-gated + report-only on master)
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    branches: [master]   # Run full security gates on PRs into master
+  push:
+    branches: [master]   # After PR is merged into master, run build + report-only scans
 
 permissions:
   contents: read
-  security-events: write   # required for SARIF uploads
+  security-events: write
   actions: read
   checks: write
 
-jobs:
-  # ========================
-  # Build Stage
-  # ========================
-  build:
-    runs-on: ubuntu-latest
-    env:
-      PYTHON_VERSION: '3.11'
-    steps:
-      # ----------- Checkout code -----------
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+env:
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/ip-lookup-webapp
+  IMAGE_TAG: ${{ github.sha }}
+  PYTHON_VERSION: '3.11'
 
-      # ----------- Python setup -----------
-      - name: Set up Python
-        uses: actions/setup-python@v5
+jobs:
+  # =========================================================
+  # PR GATES (enforce before merging to master)
+  # =========================================================
+  pr-branch-name-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # ---- Ensure branch follows naming convention ----
+      - name: Validate PR branch naming
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          echo "PR source branch: $BRANCH"
+          # Allowed: FEATURE-<slug> or FIX-<slug> (no spaces)
+          if [[ ! "$BRANCH" =~ ^(FEATURE|FIX)-[A-Za-z0-9._/-]+$ ]]; then
+            echo "::error::Invalid branch name '$BRANCH'. Use 'FEATURE-<topic>' or 'FIX-<topic>'."
+            exit 1
+          fi
+          echo "Branch name OK."
+
+  pr-build:
+    if: github.event_name == 'pull_request'
+    needs: pr-branch-name-check
+    runs-on: ubuntu-latest
+    steps:
+      # ---- Checkout the repository ----
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      # ---- Set up Python for dependency installation ----
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
+          cache: pip
 
-      # ----------- Install dependencies -----------
+      # ---- Install dependencies if requirements.txt exists ----
       - name: Install project requirements (if present)
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # ----------- Docker setup -----------
+      # ---- Prepare Docker Buildx (for multi-platform builds) ----
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # ----------- DockerHub login -----------
+      # ---- Log in to DockerHub using secrets ----
       - name: Log in to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # ----------- Build Docker image -----------
-      - name: Build Docker image
+      # ---- Build & push Docker image tagged with PR number + SHA ----
+      - name: Build & Push (PR preview) image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/ip-lookup-webapp:${{ github.sha }},ip-lookup-webapp-server:latest
-          load: true
+          push: true
           provenance: false
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:pr-${{ github.event.pull_request.number }}
 
-      # ----------- Push Docker image -----------
-      - name: Push Docker image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/ip-lookup-webapp:${{ github.sha }}
-
-      # ----------- Upload build artifacts -----------
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: coverage
-
-  # ========================
-  # Security Stage
-  # ========================
-  security:
+  pr-security:
+    if: github.event_name == 'pull_request'
+    needs: pr-build
     runs-on: ubuntu-latest
-    needs: build
     steps:
-      # ----------- Checkout code -----------
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      # ---- Checkout repo again (Trivy FS scan works on source) ----
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
 
-      # ----------- Trivy filesystem scan -----------
-      - name: Run Trivy vulnerability scanner on filesystem
+      # ---- Log in to DockerHub (needed to pull PR image) ----
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ---- Run Trivy filesystem scan (fail PR on HIGH/CRITICAL) ----
+      - name: Trivy filesystem scan (PR gate)
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          scan-type: 'fs'
+          scan-type: fs
           ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
-          exit-code: 1
+          severity: CRITICAL,HIGH
+          exit-code: 1   # fail PR if issues found
 
-      # ----------- Trivy image scan -----------
-      - name: Trivy Image Scan
+      # ---- Run Trivy image scan & produce SARIF ----
+      - name: Trivy image scan (PR gate, SARIF)
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ip-lookup-webapp-server:latest
-          format: 'sarif'
-          output: 'trivy-image.sarif'
-          vuln-type: 'os,library'
-          severity: 'HIGH,CRITICAL'
+          scan-type: image
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          format: sarif
+          output: trivy-image.sarif
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
           ignore-unfixed: true
 
-      # ----------- Upload Trivy SARIF -----------
+      # ---- Upload SARIF report to GitHub Security tab ----
       - name: Upload Trivy SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-image.sarif
           category: trivy
 
-      # ----------- Fail PR on Trivy HIGH/CRITICAL -----------
-      - name: Fail PR on Trivy HIGH/CRITICAL
-        if: github.event_name == 'pull_request'
+      # ---- Explicit fail step for HIGH/CRITICAL issues ----
+      - name: Fail PR on Trivy HIGH/CRITICAL (image)
         run: |
-          trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed ip-lookup-webapp-server:latest || {
-            echo "::error::Trivy found HIGH/CRITICAL issues"
-            exit 1
-          }
+          trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed \
+            "${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}" || {
+              echo "::error::Trivy found HIGH/CRITICAL issues in image"
+              exit 1
+            }
 
-      # ----------- Gitleaks secret scan -----------
-      - name: Check for secrets in code
+      # ---- Secrets scanning with Gitleaks (fail PR if secrets found) ----
+      - name: Check for secrets in code (PR gate)
         uses: gitleaks/gitleaks-action@v2
 
-      # ----------- Dependency review -----------
-      - name: Dependency Review
-        if: github.event_name == 'pull_request'
+      # ---- Dependency review for vulnerable libraries (fail PR) ----
+      - name: Dependency Review (PR gate)
         uses: actions/dependency-review-action@v4
 
-      # ----------- Push to main always green -----------
-      - name: Push to main always green
-        if: github.event_name == 'push'
-        run: echo "Push to main is report-only; PRs enforce strict gates."
+  # =========================================================
+  # MASTER POST-MERGE JOB (report-only, second line of defence)
+  # =========================================================
+  master-build-and-report:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      # ---- Checkout code ----
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      # ---- Prepare Docker Buildx ----
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ---- Log in to DockerHub ----
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ---- Build & push production image (latest + SHA tags) ----
+      - name: Build & Push (master) image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          provenance: false
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:latest
+
+      # ---- Report-only Trivy filesystem scan (won’t fail master) ----
+      - name: Trivy filesystem scan (report-only)
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          scan-type: fs
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+          exit-code: 0   # report only, never fail
+
+      # ---- Report-only Trivy image scan (SARIF uploaded) ----
+      - name: Trivy image scan (report-only, SARIF)
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          format: sarif
+          output: trivy-image.sarif
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+      # ---- Upload SARIF results from master build ----
+      - name: Upload Trivy SARIF (master)
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-master
+
+      # ---- Report-only secrets scanning (never fails master) ----
+      - name: Gitleaks (report-only)
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true   # doesn’t block master
