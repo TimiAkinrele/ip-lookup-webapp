@@ -98,9 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
-          path: |
-            dist
-            coverage
+          path: coverage
 
       # ---------- Additional security checks ----------
       - name: Check for secrets in code
