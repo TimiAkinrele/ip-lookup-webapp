@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
   security-events: write
   actions: read
   checks: write
@@ -140,6 +141,8 @@ jobs:
       # ---- Secrets scanning with Gitleaks (fail PR if secrets found) ----
       - name: Check for secrets in code (PR gate)
         uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ---- Dependency review for vulnerable libraries (fail PR) ----
       - name: Dependency Review (PR gate)
@@ -213,3 +216,5 @@ jobs:
       - name: Gitleaks (report-only)
         uses: gitleaks/gitleaks-action@v2
         continue-on-error: true   # doesn’t block master
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
