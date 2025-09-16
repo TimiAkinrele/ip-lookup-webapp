@@ -127,12 +127,13 @@ jobs:
 
       # ---- Explicit fail step for HIGH/CRITICAL issues ----
       - name: Fail PR on Trivy HIGH/CRITICAL (image)
-        run: |
-          trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed \
-            "${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}" || {
-              echo "::error::Trivy found HIGH/CRITICAL issues in image"
-              exit 1
-            }
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1   # Fail the step if HIGH/CRITICAL found
 
       # ---- Secrets scanning with Gitleaks (fail PR if secrets found) ----
       - name: Check for secrets in code (PR gate)
