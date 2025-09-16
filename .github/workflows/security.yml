@@ -147,6 +147,9 @@ jobs:
       # ---- Dependency review for vulnerable libraries (fail PR) ----
       - name: Dependency Review (PR gate)
         uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+      
 
   # =========================================================
   # MASTER POST-MERGE JOB (report-only)
